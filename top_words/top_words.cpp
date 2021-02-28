@@ -19,6 +19,11 @@ bool cmp(Statistics& lhs, Statistics& rhs) {
  
 void prepare(std::string& str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    /* Можно было бы чуть короче написать:
+        if (std::ispunct(str.back()))
+            str.pop_back();
+    */ 
+    
     std::size_t len = str.size();
     if (std::ispunct(str[len - 1])) {
         str.pop_back();
