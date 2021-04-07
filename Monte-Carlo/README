@@ -1,0 +1,4 @@
+Program counts Pi by Monte-Carlo method using threads
+Compiled with -O0, the program is approximately twice faster (OPEN THREADS == 2) then the analog without threads
+
+UN_REP is for number of points for one thread
