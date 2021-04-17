@@ -10,8 +10,10 @@
 
 #define AMPL 32000
 #define S_RATE 44100
-#define DUR 0.4f
+#define DUR 0.3f
 #define D_LVL 0.8f
+#define LIN_ATT 0.3f
+#define OKTAVE 1.0f
 
 class Note {
 public:
@@ -20,7 +22,9 @@ public:
         level = distortion_level;
         dur = duration_in_sec;
         make_samp(samples, freq, dur);
-        make_distortion(samples, level);
+        //make_distortion(samples, level);
+        //make_linear_attenuation(samples, dur);
+        make_parabolic_attenuation(samples, dur);
     };
     Note(){};
     std::vector<sf::Int16> samples;
@@ -35,14 +39,36 @@ private:
             samples.push_back(sample);
         }
     }
-    void make_distortion(std::vector<sf::Int16> &samples, float part) {
+    void make_distortion(std::vector<sf::Int16> &sample, float part) {
         assert((part < 1) && (part > 0));
         float level = AMPL * part;
-        for (auto& x : samples) {
+        for (auto& x : sample) {
             if (x > level) {
                 x = level;
             } else if (x < ((-1) * level)) {
                 x = (-1) * level;
+            }
+        }
+    }
+    void make_linear_attenuation(std::vector<sf::Int16> &sample, float t) {
+        for (std::size_t i = 0; i < (std::size_t)(S_RATE * t); i++) {
+            float lim = ((-1) * LIN_ATT * AMPL * i) / (t * S_RATE) + LIN_ATT * AMPL;
+            if (sample[i] > lim) {
+                sample[i] = lim;
+            } else if (sample[i] < (-1) * lim) {
+                sample[i] = (-1) * lim;
+            }
+        }
+    }
+    void make_parabolic_attenuation(std::vector<sf::Int16> &sample, float t) {
+        for (std::size_t i = 0; i < (std::size_t)(S_RATE * t); i++) {
+            float k = AMPL / pow(S_RATE * t, 2);
+            float i_0 = t * S_RATE;
+            float lim = k * pow(i - i_0, 2);
+            if (sample[i] > lim) {
+                sample[i] = lim;
+            } else if (sample[i] < (-1) * lim) {
+                sample[i] = (-1) * lim;
             }
         }
     }
@@ -51,113 +77,104 @@ private:
 class Sintezator {
 public:
     Sintezator () {
-        C = {261.63f, D_LVL, DUR};
-        Cd = {277.18f, D_LVL, DUR};
-        D = {293.66f, D_LVL, DUR};
-        Dd = {311.13f, D_LVL, DUR};
-        E = {329.63f, D_LVL, DUR};
-        F = {349.23f, D_LVL, DUR};
-        Fd = {369.99f, D_LVL, DUR};
-        G = {392.00f, D_LVL, DUR};
-        Gd = {415.30f, D_LVL, DUR};
-        A = {440.00f, D_LVL, DUR};
-        Ad = {466.16f, D_LVL, DUR};
-        H = {493.88f, D_LVL, DUR};
+        notes.push_back({OKTAVE * 261.63f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 277.18f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 293.66f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 311.13f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 329.63f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 349.23f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 369.99f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 392.00f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 415.30f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 440.00f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 466.16f, D_LVL, DUR});
+        notes.push_back({OKTAVE * 493.88f, D_LVL, DUR});
 
-        buffer_C.loadFromSamples(&C.samples[0], C.samples.size(), 1, S_RATE);
-        buffer_Cd.loadFromSamples(&Cd.samples[0], Cd.samples.size(), 1, S_RATE);
-        buffer_D.loadFromSamples(&D.samples[0], D.samples.size(), 1, S_RATE);
-        buffer_Dd.loadFromSamples(&Dd.samples[0], Dd.samples.size(), 1, S_RATE);
-        buffer_E.loadFromSamples(&E.samples[0], E.samples.size(), 1, S_RATE);
-        buffer_F.loadFromSamples(&F.samples[0], F.samples.size(), 1, S_RATE);
-        buffer_Fd.loadFromSamples(&Fd.samples[0], Fd.samples.size(), 1, S_RATE);
-        buffer_G.loadFromSamples(&G.samples[0], G.samples.size(), 1, S_RATE);
-        buffer_Gd.loadFromSamples(&Gd.samples[0], Gd.samples.size(), 1, S_RATE);
-        buffer_A.loadFromSamples(&A.samples[0], A.samples.size(), 1, S_RATE);
-        buffer_Ad.loadFromSamples(&Ad.samples[0], Ad.samples.size(), 1, S_RATE);
-        buffer_H.loadFromSamples(&H.samples[0], H.samples.size(), 1, S_RATE);
-        
-        sound_C.setBuffer(buffer_C);
-        sound_Cd.setBuffer(buffer_Cd);
-        sound_D.setBuffer(buffer_D);
-        sound_Dd.setBuffer(buffer_Dd);
-        sound_E.setBuffer(buffer_E);
-        sound_G.setBuffer(buffer_G);
-        sound_Gd.setBuffer(buffer_Gd);
-        sound_F.setBuffer(buffer_F);
-        sound_Fd.setBuffer(buffer_Fd);
-        sound_A.setBuffer(buffer_A);
-        sound_Ad.setBuffer(buffer_Ad);
-        sound_H.setBuffer(buffer_H);
+        buffers.resize(12);
+        sounds.resize(12);
+
+        for (std::size_t i = 0; i < 12; i++) {
+            buffers[i].loadFromSamples(&notes[i].samples[0], notes[i].samples.size(), 1, S_RATE);
+            sounds[i].setBuffer(buffers[i]);
+        }
+        textures.resize(4);
+        textures[0].loadFromFile("bongo_cat_0.png");
+        textures[1].loadFromFile("bongo_cat_1.png");
+        textures[2].loadFromFile("bongo_cat_2.png");
+        textures[3].loadFromFile("bongo_cat_3.png");
+
+        sprite.setTexture(textures[0]);
+
     };
-    
-    Note C;
-    Note Cd;
-    Note D;
-    Note Dd;
-    Note E;
-    Note F;
-    Note Fd;
-    Note G;
-    Note Gd;
-    Note A;
-    Note Ad;
-    Note H;
+    std::vector<Note> notes;
+    std::vector<sf::SoundBuffer> buffers;
+    std::vector<sf::Sound> sounds;
 
-    sf::SoundBuffer buffer_C;
-    sf::SoundBuffer buffer_Cd;
-    sf::SoundBuffer buffer_D;
-    sf::SoundBuffer buffer_Dd;
-    sf::SoundBuffer buffer_E;
-    sf::SoundBuffer buffer_F;
-    sf::SoundBuffer buffer_Fd;
-    sf::SoundBuffer buffer_G;
-    sf::SoundBuffer buffer_Gd;
-    sf::SoundBuffer buffer_A;
-    sf::SoundBuffer buffer_Ad;
-    sf::SoundBuffer buffer_H;
-    
-    sf::Sound sound_C;
-    sf::Sound sound_Cd;
-    sf::Sound sound_D;
-    sf::Sound sound_Dd;
-    sf::Sound sound_E;
-    sf::Sound sound_F;
-    sf::Sound sound_Fd;
-    sf::Sound sound_G;
-    sf::Sound sound_Gd;
-    sf::Sound sound_A;
-    sf::Sound sound_Ad;
-    sf::Sound sound_H;
+    std::vector<sf::Texture> textures;
+    sf::Sprite sprite;
 
-    void buffer_update(sf::Event event) {
+    sf::Clock clock;
+    sf::Time time;
+
+    void process(sf::Event event) {
         if (event.type == sf::Event::KeyPressed) {
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-                sound_C.play();
+                sounds[0].play();
+                sprite.setTexture(textures[1]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
-                sound_Cd.play();
+                sounds[1].play();
+                sprite.setTexture(textures[1]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-                sound_D.play();
+                sounds[2].play();
+                sprite.setTexture(textures[1]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
-                sound_Dd.play();
+                sounds[3].play();
+                sprite.setTexture(textures[1]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-                sound_E.play();
+                sounds[4].play();
+                sprite.setTexture(textures[2]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
-                sound_F.play();
+                sounds[5].play();
+                sprite.setTexture(textures[2]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
-                sound_Fd.play();
+                sounds[6].play();
+                sprite.setTexture(textures[2]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-                sound_G.play();
+                sounds[7].play();
+                sprite.setTexture(textures[2]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::G)) {
-                sound_Gd.play();
+                sounds[8].play();
+                sprite.setTexture(textures[3]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::B)) {
-                sound_A.play();
+                sounds[9].play();
+                sprite.setTexture(textures[3]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::H)) {
-                sound_Ad.play();
+                sounds[10].play();
+                sprite.setTexture(textures[3]);
+                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
-                sound_H.play();
+                sounds[11].play();
+                sprite.setTexture(textures[3]);
+                clock.restart();
             }
-            
+        }
+        
+    }
+    void update_tex() {
+        time = clock.getElapsedTime();
+        float t = time.asSeconds();
+        if (t >= (DUR / 2)) {
+            sprite.setTexture(textures[0]);
         }
     }
 };
