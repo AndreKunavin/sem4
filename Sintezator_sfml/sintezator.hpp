@@ -97,13 +97,19 @@ public:
             buffers[i].loadFromSamples(&notes[i].samples[0], notes[i].samples.size(), 1, S_RATE);
             sounds[i].setBuffer(buffers[i]);
         }
-        textures.resize(4);
-        textures[0].loadFromFile("bongo_cat_0.png");
-        textures[1].loadFromFile("bongo_cat_1.png");
-        textures[2].loadFromFile("bongo_cat_2.png");
-        textures[3].loadFromFile("bongo_cat_3.png");
+        textures.resize(8);
+        textures[0].loadFromFile("bongo_cat/bongo_cat_0.png");
+        textures[1].loadFromFile("bongo_cat/bongo_cat_1.png");
+        textures[2].loadFromFile("bongo_cat/bongo_cat_2.png");
+        textures[3].loadFromFile("bongo_cat/bongo_cat_3.png");
+        textures[4].loadFromFile("bongo_cat/bongo_cat_4.png");
+        textures[5].loadFromFile("bongo_cat/bongo_cat_5.png");
+        textures[6].loadFromFile("bongo_cat/bongo_cat_inhales.png");
+        textures[7].loadFromFile("bongo_cat/bongo_cat_dre.png");
 
         sprite.setTexture(textures[0]);
+
+        music.openFromFile("still_dre.ogg");
 
     };
     std::vector<Note> notes;
@@ -112,69 +118,84 @@ public:
 
     std::vector<sf::Texture> textures;
     sf::Sprite sprite;
+    std::size_t tex_type = 0;
 
     sf::Clock clock;
     sf::Time time;
 
+    sf::SoundBuffer m_buff;
+    sf::Music music;
+
     void process(sf::Event event) {
         if (event.type == sf::Event::KeyPressed) {
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-                sounds[0].play();
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
+                process_update(0);
                 sprite.setTexture(textures[1]);
-                clock.restart();
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
-                sounds[1].play();
-                sprite.setTexture(textures[1]);
-                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-                sounds[2].play();
+                process_update(1);
                 sprite.setTexture(textures[1]);
-                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
-                sounds[3].play();
-                sprite.setTexture(textures[1]);
-                clock.restart();
+                process_update(2);
+                sprite.setTexture(textures[2]);
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-                sounds[4].play();
+                process_update(3);
                 sprite.setTexture(textures[2]);
-                clock.restart();
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
-                sounds[5].play();
-                sprite.setTexture(textures[2]);
-                clock.restart();
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::F)) {
-                sounds[6].play();
-                sprite.setTexture(textures[2]);
-                clock.restart();
+                process_update(4);
+                sprite.setTexture(textures[3]);
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-                sounds[7].play();
-                sprite.setTexture(textures[2]);
-                clock.restart();
+                process_update(5);
+                sprite.setTexture(textures[3]);
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::G)) {
-                sounds[8].play();
-                sprite.setTexture(textures[3]);
-                clock.restart();
+                process_update(6);
+                sprite.setTexture(textures[4]);
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::B)) {
-                sounds[9].play();
-                sprite.setTexture(textures[3]);
-                clock.restart();
+                process_update(7);
+                sprite.setTexture(textures[4]);
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::H)) {
-                sounds[10].play();
-                sprite.setTexture(textures[3]);
-                clock.restart();
+                process_update(8);
+                sprite.setTexture(textures[5]);
             } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N)) {
-                sounds[11].play();
-                sprite.setTexture(textures[3]);
-                clock.restart();
-            }
+                process_update(9);
+                sprite.setTexture(textures[5]);
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::J)) {
+                process_update(10);
+                sprite.setTexture(textures[1]);
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::M)) {
+                process_update(11);
+                sprite.setTexture(textures[1]);
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+                sprite.setTexture(textures[6]);
+                if (tex_type == 1) {
+                    tex_type = 0;
+                } else {
+                    tex_type = 1;
+                }
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
+                sprite.setTexture(textures[7]);
+                if (tex_type == 1) {
+                    tex_type = 0;
+                    music.pause();
+                } else {
+                    tex_type = 1;
+                    music.play();
+                }
+            } 
         }
         
+    }
+    void process_update(std::size_t i) {
+        sounds[i].play();
+        clock.restart();
+        tex_type = 0;
     }
     void update_tex() {
         time = clock.getElapsedTime();
         float t = time.asSeconds();
         if (t >= (DUR / 2)) {
+            if (tex_type != 1) {
             sprite.setTexture(textures[0]);
+            }
         }
     }
 };

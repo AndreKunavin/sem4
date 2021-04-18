@@ -1,17 +1,19 @@
 The program is a simulator of a music sintezator
 
 Keys and notes:
-A -> C
-Z -> C#
-S -> D
-X -> D#
-D -> E
-C -> F
-F -> F#
-V -> G
-G -> G#
-B -> A
-H -> A#
-N -> H
+Z -> C
+S -> C#
+X -> D
+D -> D#
+C -> E
+V -> F
+G -> F#
+B -> G
+H -> G#
+N -> A
+J -> A#
+M -> H
 
-Have fun!
+If you need to inhale before playing press W
+
+If your music is cool press Q
